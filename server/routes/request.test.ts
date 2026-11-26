@@ -420,6 +420,7 @@ async function seedUser(
   email: string,
   fields: {
     movieQuotaLimit?: number;
+    movieQuotaDays?: number;
     tvQuotaLimit?: number;
     tvQuotaDays?: number;
     permissions?: number;
@@ -667,6 +668,51 @@ describe('PUT /request/:requestId (season availability)', () => {
 });
 
 describe('PUT /request/:requestId (quota)', () => {
+  it('refreshes movie and season quotas at local midnight, including on edits', async (t) => {
+    const settings = getSettings().main;
+    const previousZone = settings.dailyQuotaResetTimeZone;
+    t.after(() => {
+      settings.dailyQuotaResetTimeZone = previousZone;
+    });
+    settings.dailyQuotaResetTimeZone = 'Europe/Amsterdam';
+
+    const owner = await seedUser('demo@seerr.dev', {
+      movieQuotaDays: 1,
+      movieQuotaLimit: 1,
+      tvQuotaDays: 1,
+      tvQuotaLimit: 1,
+    });
+    const agent = await loginAs('demo@seerr.dev', 'test1234');
+    const createdAt = new Date('2026-11-27T22:59:59Z');
+    await seedRequest(MediaRequestStatus.PENDING, { createdAt });
+    const tv = await seedTvRequest(owner, [1], { createdAt });
+
+    t.mock.timers.enable({ apis: ['Date'], now: createdAt });
+    const friday = await owner.getQuota();
+    assert.equal(friday.movie.remaining, 0);
+    assert.equal(friday.tv.remaining, 0);
+
+    t.mock.timers.setTime(Date.parse('2026-11-27T23:00:00Z'));
+    const saturday = await owner.getQuota();
+    assert.equal(saturday.movie.remaining, 1);
+    assert.equal(saturday.tv.remaining, 1);
+
+    // Yesterday's season cannot be credited against an edit made today.
+    const res = await agent
+      .put(`/request/${tv.id}`)
+      .send({ mediaType: MediaType.TV, seasons: [1, 2] });
+    assert.equal(res.status, 403);
+
+    // SQLite's default timestamp has no fractional seconds.
+    const repo = getRepository(MediaRequest);
+    await repo.query('UPDATE media_request SET createdAt = ?', [
+      '2026-11-27 23:00:00',
+    ]);
+    const midnight = await owner.getQuota();
+    assert.equal(midnight.movie.remaining, 0);
+    assert.equal(midnight.tv.remaining, 0);
+  });
+
   it('rejects adding seasons beyond the season limit', async () => {
     const requestRepo = getRepository(MediaRequest);
     const owner = await seedUser('demo@seerr.dev', { tvQuotaLimit: 2 });

@@ -38,6 +38,11 @@ const messages = defineMessages('components.Settings.SettingsUsers', {
     'Allow {mediaServerName} users to sign in without first being imported',
   movieRequestLimitLabel: 'Global Movie Request Limit',
   tvRequestLimitLabel: 'Global Series Request Limit',
+  dailyQuotaReset: 'Daily Quota Reset',
+  dailyQuotaResetTip:
+    'Applies to movie and series limits set to one day, including user overrides',
+  rollingQuota: 'Rolling 24 hours',
+  midnightQuota: 'Midnight in time zone',
   defaultPermissions: 'Default Permissions',
   defaultPermissionsTip: 'Initial permissions assigned to new users',
   disabledMediaServerLoginWarning:
@@ -114,6 +119,7 @@ const SettingsUsers = () => {
             movieQuotaDays: data?.defaultQuotas.movie.quotaDays ?? 7,
             tvQuotaLimit: data?.defaultQuotas.tv.quotaLimit ?? 0,
             tvQuotaDays: data?.defaultQuotas.tv.quotaDays ?? 7,
+            dailyQuotaResetTimeZone: data?.dailyQuotaResetTimeZone ?? '',
             defaultPermissions: data?.defaultPermissions ?? 0,
           }}
           validationSchema={schema}
@@ -124,6 +130,7 @@ const SettingsUsers = () => {
                 localLogin: values.localLogin,
                 mediaServerLogin: values.mediaServerLogin,
                 newPlexLogin: values.newPlexLogin,
+                dailyQuotaResetTimeZone: values.dailyQuotaResetTimeZone,
                 defaultQuotas: {
                   movie: {
                     quotaLimit: values.movieQuotaLimit,
@@ -244,6 +251,45 @@ const SettingsUsers = () => {
                         setFieldValue('newPlexLogin', !values.newPlexLogin);
                       }}
                     />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <label
+                    htmlFor="dailyQuotaResetTimeZone"
+                    className="text-label"
+                  >
+                    {intl.formatMessage(messages.dailyQuotaReset)}
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.dailyQuotaResetTip)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <Field
+                      as="select"
+                      id="dailyQuotaResetTimeZone"
+                      name="dailyQuotaResetTimeZone"
+                    >
+                      <option value="">
+                        {intl.formatMessage(messages.rollingQuota)}
+                      </option>
+                      <optgroup
+                        label={intl.formatMessage(messages.midnightQuota)}
+                      >
+                        {Array.from(
+                          new Set([
+                            'UTC',
+                            ...Intl.supportedValuesOf('timeZone'),
+                            ...(values.dailyQuotaResetTimeZone
+                              ? [values.dailyQuotaResetTimeZone]
+                              : []),
+                          ])
+                        ).map((zone) => (
+                          <option key={zone} value={zone}>
+                            {zone}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </Field>
                   </div>
                 </div>
                 <div className="form-row">

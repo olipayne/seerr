@@ -135,6 +135,7 @@ export interface MainSettings {
   applicationUrl: string;
   cacheImages: boolean;
   defaultPermissions: number;
+  dailyQuotaResetTimeZone?: string;
   defaultQuotas: {
     movie: Quota;
     tv: Quota;

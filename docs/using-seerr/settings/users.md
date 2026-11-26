@@ -34,6 +34,8 @@ Select the request limits you would like granted to users.
 
 Unless an override is configured, users are granted these global request limits.
 
+**Daily Quota Reset** controls when one-day movie and series limits renew, including per-user overrides. The default is a rolling 24-hour window. Choose a time zone to renew the allowance at local midnight, even when the clocks change. For example, a Friday evening movie request then counts toward Friday’s allowance, and the user can request again on Saturday morning. Longer quota periods continue to roll.
+
 Note that users with the **Manage Users** permission are exempt from request limits, since that permission also grants the ability to submit requests on behalf of other users.
 
 ## Default Permissions

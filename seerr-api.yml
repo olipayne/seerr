@@ -235,6 +235,10 @@ components:
     MainSettings:
       type: object
       properties:
+        dailyQuotaResetTimeZone:
+          type: string
+          description: Time zone for midnight resets of one-day quotas. An empty value uses a rolling 24-hour window.
+          example: Europe/Amsterdam
         apiKey:
           type: string
           readOnly: true
@@ -4728,6 +4732,13 @@ paths:
                   movie:
                     type: object
                     properties:
+                      windowStart:
+                        type: string
+                        format: date-time
+                        description: Inclusive start of the current quota window, when bounded.
+                      resetTimeZone:
+                        type: string
+                        description: Time zone used for daily midnight resets, when enabled.
                       days:
                         type: number
                         example: 7
@@ -4746,6 +4757,13 @@ paths:
                   tv:
                     type: object
                     properties:
+                      windowStart:
+                        type: string
+                        format: date-time
+                        description: Inclusive start of the current quota window, when bounded.
+                      resetTimeZone:
+                        type: string
+                        description: Time zone used for daily midnight resets, when enabled.
                       days:
                         type: number
                         example: 7
