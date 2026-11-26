@@ -78,7 +78,21 @@ settingsRoutes.get('/main', (req, res, next) => {
   res.status(200).json(filteredMainSettings(req.user, settings.main));
 });
 
-settingsRoutes.post('/main', async (req, res) => {
+settingsRoutes.post('/main', async (req, res, next) => {
+  const zone = req.body.dailyQuotaResetTimeZone;
+  if (zone !== undefined && zone !== '') {
+    try {
+      if (typeof zone !== 'string' || /^[+-]/.test(zone))
+        throw new RangeError();
+      new Intl.DateTimeFormat('en', { timeZone: zone });
+    } catch {
+      return next({
+        status: 400,
+        message: 'Invalid daily quota reset time zone.',
+      });
+    }
+  }
+
   const settings = getSettings();
 
   settings.main = merge(settings.main, req.body);

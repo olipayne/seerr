@@ -31,6 +31,7 @@ const messages = defineMessages('components.UserProfile', {
   unlimited: 'Unlimited',
   totalrequests: 'Total Requests',
   pastdays: '{type} (past {days} days)',
+  todayInZone: '{type} (today in {zone})',
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
   recentlywatched: 'Recently Watched',
@@ -185,10 +186,16 @@ const UserProfile = () => {
                   }`}
                 >
                   {quota.movie.limit
-                    ? intl.formatMessage(messages.pastdays, {
-                        type: intl.formatMessage(messages.movierequests),
-                        days: quota?.movie.days,
-                      })
+                    ? intl.formatMessage(
+                        quota.movie.resetTimeZone
+                          ? messages.todayInZone
+                          : messages.pastdays,
+                        {
+                          zone: quota.movie.resetTimeZone,
+                          type: intl.formatMessage(messages.movierequests),
+                          days: quota?.movie.days,
+                        }
+                      )
                     : intl.formatMessage(messages.movierequests)}
                 </dt>
                 <dd
@@ -240,10 +247,16 @@ const UserProfile = () => {
                   }`}
                 >
                   {quota.tv.limit
-                    ? intl.formatMessage(messages.pastdays, {
-                        type: intl.formatMessage(messages.seriesrequest),
-                        days: quota?.tv.days,
-                      })
+                    ? intl.formatMessage(
+                        quota.tv.resetTimeZone
+                          ? messages.todayInZone
+                          : messages.pastdays,
+                        {
+                          zone: quota.tv.resetTimeZone,
+                          type: intl.formatMessage(messages.seriesrequest),
+                          days: quota?.tv.days,
+                        }
+                      )
                     : intl.formatMessage(messages.seriesrequest)}
                 </dt>
                 <dd

@@ -12,6 +12,8 @@ export interface UserRequestsResponse extends PaginatedResponse {
 }
 
 export interface QuotaStatus {
+  windowStart?: string;
+  resetTimeZone?: string;
   days?: number;
   limit?: number;
   used: number;

@@ -9,7 +9,7 @@ import { Permission, hasPermission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { DbAwareColumn, resolveDbType } from '@server/utils/DbColumnHelper';
-import { AfterDate } from '@server/utils/dateHelpers';
+import { createdSince, quotaWindowStart } from '@server/utils/quotaWindow';
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { nanoid } from 'nanoid';
@@ -284,7 +284,7 @@ export class User {
 
   public async getQuota(): Promise<QuotaResponse> {
     const {
-      main: { defaultQuotas },
+      main: { defaultQuotas, dailyQuotaResetTimeZone },
     } = getSettings();
     const requestRepository = getRepository(MediaRequest);
     const canBypass = this.hasPermission([Permission.MANAGE_USERS], {
@@ -296,11 +296,12 @@ export class User {
       : 0;
     const movieQuotaDays = this.movieQuotaDays ?? defaultQuotas.movie.quotaDays;
 
-    // Count movie requests made during quota period
-    const movieDate = new Date();
-    if (movieQuotaDays) {
-      movieDate.setDate(movieDate.getDate() - movieQuotaDays);
-    }
+    const now = new Date();
+    const movieStart = quotaWindowStart(
+      movieQuotaDays,
+      dailyQuotaResetTimeZone,
+      now
+    );
 
     const movieQuotaUsed = movieQuotaLimit
       ? await requestRepository.count({
@@ -308,7 +309,7 @@ export class User {
             requestedBy: {
               id: this.id,
             },
-            ...(movieQuotaDays ? { createdAt: AfterDate(movieDate) } : {}),
+            ...(movieStart && { createdAt: createdSince(movieStart) }),
             type: MediaType.MOVIE,
             status: Not(MediaRequestStatus.DECLINED),
             ignoreQuota: false,
@@ -322,11 +323,7 @@ export class User {
     const tvQuotaDays = this.tvQuotaDays ?? defaultQuotas.tv.quotaDays;
 
     // Count tv season requests made during quota period
-    const tvDate = new Date();
-    if (tvQuotaDays) {
-      tvDate.setDate(tvDate.getDate() - tvQuotaDays);
-    }
-    const tvQuotaStartDate = tvDate.toJSON();
+    const tvStart = quotaWindowStart(tvQuotaDays, dailyQuotaResetTimeZone, now);
     const tvQuotaUsedQuery = requestRepository
       .createQueryBuilder('request')
       .leftJoin('request.requestedBy', 'requestedBy')
@@ -340,10 +337,8 @@ export class User {
         declinedStatus: MediaRequestStatus.DECLINED,
       });
 
-    if (tvQuotaDays) {
-      tvQuotaUsedQuery.andWhere('request.createdAt > :date', {
-        date: tvQuotaStartDate,
-      });
+    if (tvStart) {
+      tvQuotaUsedQuery.andWhere({ createdAt: createdSince(tvStart) });
     }
 
     const tvQuotaUsed = tvQuotaLimit
@@ -366,6 +361,11 @@ export class User {
     return {
       movie: {
         days: movieQuotaDays,
+        windowStart: movieStart?.toISOString(),
+        resetTimeZone:
+          movieQuotaDays === 1
+            ? dailyQuotaResetTimeZone || undefined
+            : undefined,
         limit: movieQuotaLimit,
         used: movieQuotaUsed,
         remaining: movieQuotaLimit
@@ -377,6 +377,9 @@ export class User {
       },
       tv: {
         days: tvQuotaDays,
+        windowStart: tvStart?.toISOString(),
+        resetTimeZone:
+          tvQuotaDays === 1 ? dailyQuotaResetTimeZone || undefined : undefined,
         limit: tvQuotaLimit,
         used: tvQuotaUsed,
         remaining: tvQuotaLimit

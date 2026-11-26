@@ -652,17 +652,10 @@ requestRoutes.put<{ requestId: string }>(
 
                   // Only the seasons getQuota already counted for this owner are
                   // paid for, so the edit is charged for everything it left out
-                  const quotaWindowStart = new Date();
-                  if (quotas.tv.days) {
-                    quotaWindowStart.setDate(
-                      quotaWindowStart.getDate() - quotas.tv.days
-                    );
-                  }
-
                   const countedAlready =
                     !ownerChanging &&
-                    (!quotas.tv.days || request.createdAt > quotaWindowStart);
-
+                    (!quotas.tv.windowStart ||
+                      request.createdAt >= new Date(quotas.tv.windowStart));
                   const priorSeasonCount = countedAlready
                     ? request.seasons.length
                     : 0;
